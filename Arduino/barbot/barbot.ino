@@ -2,9 +2,8 @@
 #include <SPI.h>
 #include <Piccolino_RAM.h>
 #include <Piccolino_OLED_SRAM.h>
-
-#include "HX711.h"
-#include "PCF8575.h"
+#include <HX711.h>
+#include <PCF8575.h>
 
 HX711 scale(3, 4);
 PCF8575 expander;
