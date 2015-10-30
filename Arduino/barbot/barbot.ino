@@ -5,7 +5,18 @@
 #include <HX711.h>
 #include <PCF8575.h>
 
-HX711 scale(3, 4);
+#define SCALE_DATA 3
+#define SCALE_CLK 4
+
+#define EXPPIN0 0
+#define EXPPIN1 1
+#define BAUD 57600
+// this value is obtained by calibrating the scale with known weights
+#define SCALE_CALIBRATION -1916
+
+int buttonPins[2] = {14, 15};
+
+HX711 scale(SCALE_DATA, SCALE_CLK);
 PCF8575 expander;
 Piccolino_OLED_SRAM display;
 const byte expanderAddress = 0x20;
@@ -14,14 +25,14 @@ const byte s7sAddress = 0x71;
 bool ledEnabled = false;
 
 void setup() {
-  Serial.begin(57600);
+  Serial.begin(BAUD);
   Serial.println("*-*-*-*-*-*-*-*-*-*-*-*-*");
   Serial.println("*-*-*-*-*-*-*-*-*-*-*-*-*");
   Serial.println("BarBot");
   Serial.println("*-*-*-*-*-*-*-*-*-*-*-*-*");
   Serial.println("*-*-*-*-*-*-*-*-*-*-*-*-*");
 
-  Serial.println("Setting up OLED display");
+  //Serial.println("Setting up OLED display");
   display.begin();
   display.clear();
 
@@ -33,6 +44,9 @@ void setup() {
 
   Wire.begin();
 
+  pinMode(buttonPins[0], INPUT);
+  pinMode(buttonPins[1], INPUT);
+
   if(ledEnabled) {
     Serial.println("Setting up LED display");
     clearDisplayI2C();
@@ -43,50 +57,12 @@ void setup() {
     lcdBarBotAnimation();
   }
   
-  Serial.println("Setting up pumps");
   expander.begin(expanderAddress);
-  expander.pinMode(0, OUTPUT);
-  expander.pinMode(1, OUTPUT);
+  expander.pinMode(EXPPIN0, OUTPUT);
+  expander.pinMode(EXPPIN1, OUTPUT);
 
-  /*
-  Serial.println("Before setting up the scale:");
-  Serial.print("read: \t\t");
-  Serial.println(scale.read());      // print a raw reading from the ADC
+  scale.set_scale(SCALE_CALIBRATION);                      
 
-  Serial.print("read average: \t\t");
-  Serial.println(scale.read_average(20));   // print the average of 20 readings from the ADC
-
-  Serial.print("get value: \t\t");
-  Serial.println(scale.get_value(5));   // print the average of 5 readings from the ADC minus the tare weight (not set yet)
-
-  Serial.print("get units: \t\t");
-  Serial.println(scale.get_units(5), 1);  // print the average of 5 readings from the ADC minus tare weight (not set) divided 
-            // by the SCALE parameter (not set yet)
-  */
-
-  Serial.println("Calibrating scale");
-  // this value is obtained by calibrating the scale with known weights
-  scale.set_scale(-54757.57f);                      
-  // reset the scale to 0
-  // scale.tare();
-
-  /*
-  Serial.println("After setting up the scale:");
-
-  Serial.print("read: \t\t");
-  Serial.println(scale.read());                 // print a raw reading from the ADC
-
-  Serial.print("read average: \t\t");
-  Serial.println(scale.read_average(20));       // print the average of 20 readings from the ADC
-
-  Serial.print("get value: \t\t");
-  Serial.println(scale.get_value(5));   // print the average of 5 readings from the ADC minus the tare weight, set with tare()
-
-  Serial.print("get units: \t\t");
-  Serial.println(scale.get_units(5), 1);        // print the average of 5 readings from the ADC minus tare weight, divided 
-            // by the SCALE parameter set with set_scale
-  */
-  
   Serial.println("Ready.");
   Serial.println("Enter serial command");
   Serial.println("Format: {pump number} {weight in milligrams} {name of liquor}");
@@ -108,7 +84,7 @@ enum state {
 
 #define MAX_LINE 50
 
-state currentState;
+state currentState = waiting;
 char serialInput[MAX_LINE+1];
 double currentWeight;
 int percentWeight;
@@ -121,6 +97,9 @@ char oledWeightString[10];
 int pumpNumber;
 double targetWeight;
 String liquorName;
+
+int lastButton1 = LOW;
+int lastButton2 = LOW;
 
 void loop() {
 
@@ -148,16 +127,35 @@ void loop() {
   switch(currentState) {
     case waiting:
 
+      Serial.println("Waiting for serial data");
+
       while(!lineAvailable(MAX_LINE, serialInput)) {
         delay(10);
+
+        if(buttonPressed(0)) {
+          pumpNumber = 0;
+          targetWeight = 5.0;
+          liquorName = "Test 5.0g";
+          currentState = tare;
+          break;
+        }
+
+        if(buttonPressed(1)) {
+          pumpNumber = 1;
+          targetWeight = 15.0;
+          liquorName = "Test 15g (1/2oz)";
+          currentState = tare;
+          break;
+        }
       }
-    
-      //if(readLine(MAX_LINE, serialInput)) {
+
+      // In debug mode, a button press will set currentState = tare
+      if(currentState != tare) {
         Serial.println(serialInput);
         if(!parseSerialCommand((String)serialInput)) {
           Serial.println("Invalid serial command");
           Serial.println("Format: {pump number} {weight in milliigrams} {name of liquor}");
-          Serial.println("eg. 01 0080 3/4oz Bourbon");
+          Serial.println("eg. 01 00080 3/4oz Bourbon");
           return;
         }
         Serial.print("Pump: ");
@@ -166,9 +164,9 @@ void loop() {
         Serial.print(targetWeight);
         Serial.print(" Name: ");
         Serial.println(liquorName);
-  
+      
         currentState = tare;
-      //}
+      }
       break;
       
     case tare:
@@ -203,7 +201,7 @@ void loop() {
     case dispensing:
       // Read the scale
       if(!ledEnabled) {
-        currentWeight = scale.get_units(2);
+        currentWeight = scale.get_units(5);
       }
 
       percentWeight = (int)(currentWeight / targetWeight * 100);
@@ -243,7 +241,7 @@ void loop() {
       display.print(oledPercentString);
       */
 
-      sprintf(oledWeightString, "%01d.%03dg     ", (int)(currentWeight), abs((int)(currentWeight*1000)%1000));
+      sprintf(oledWeightString, "%01d.%02dg     ", (int)(currentWeight), abs((int)(currentWeight*100)%100));
       display.setCursor(0,52);
       display.print(oledWeightString);
 
@@ -293,6 +291,30 @@ void loop() {
   expander.digitalWrite(1, HIGH);
   delay(100);
   */
+}
+
+
+int buttonStates[2] = {LOW, LOW};
+int lastButtonStates[2] = {LOW, LOW};
+
+
+bool buttonPressed(int num) {
+  buttonStates[num] = digitalRead(buttonPins[num]);
+  
+  if(buttonStates[num] != lastButtonStates[num]) {
+    Serial.print("Button ");
+    Serial.print(num);
+    Serial.print(" is now ");
+    Serial.println(buttonStates[num]);
+    lastButtonStates[num] = buttonStates[num];
+    if(buttonStates[num] == HIGH) {
+      return true;
+    } else {
+      return false;
+    }
+  } else {
+    return false;
+  }
 }
 
 
