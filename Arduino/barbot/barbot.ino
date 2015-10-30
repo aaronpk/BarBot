@@ -66,7 +66,7 @@ void setup() {
   Serial.println("Ready.");
   Serial.println("Enter serial command");
   Serial.println("Format: {pump number} {weight in milligrams} {name of liquor}");
-  Serial.println("eg. 01 0084 3/4oz Bourbon");
+  Serial.println("eg. 01 00084 3/4oz Bourbon");
   Serial.println("==========================");
 
   display.setCursor(20,50);
@@ -135,7 +135,7 @@ void loop() {
         if(buttonPressed(0)) {
           pumpNumber = 0;
           targetWeight = 5.0;
-          liquorName = "Test 5.0g";
+          liquorName = "Test 5g";
           currentState = tare;
           break;
         }
@@ -428,8 +428,8 @@ boolean parseSerialCommand(String inputString)
   }
   
   pumpNumber = (int)inputString.substring(0,2).toInt();
-  targetWeight = ((double)inputString.substring(3,7).toInt()) / 1000.0;
-  liquorName = inputString.substring(8);
+  targetWeight = ((double)inputString.substring(3,8).toInt()) / 1000.0;
+  liquorName = inputString.substring(9);
 
   if(pumpNumber == 0 || targetWeight == 0) {
     return false;
