@@ -5,16 +5,36 @@
 #include <HX711.h>
 #include <PCF8575.h>
 
+// Which pins are the scale plugged in to
 #define SCALE_DATA 3
 #define SCALE_CLK 4
 
+// Pins 0 and 1 are SCL and SCA, you probably don't need to change
 #define EXPPIN0 0
 #define EXPPIN1 1
+
+// Serial communication rate
 #define BAUD 57600
+
+// Hardware debug buttons
+int buttonPins[2] = {14, 15};
+
 // this value is obtained by calibrating the scale with known weights
 #define SCALE_CALIBRATION -1916
 
-int buttonPins[2] = {14, 15};
+// How many samples of the scale to read per loop?
+// A larger number averages out errors better, but may cause 
+// overpours since we don't get a chance to stop the pump as often.
+#define SAMPLES_PER_LOOP 5
+
+// Between samples, if the weight difference is greater than this
+// value (in grams), the sample is tossed out. This smoothes out
+// jolts in the measurement such as when the glass is bumped, or
+// also if there is noise in the scale.
+#define NOISE_THRESHOLD 5
+
+
+/////////////////////////////////////////////////////////////////
 
 HX711 scale(SCALE_DATA, SCALE_CLK);
 PCF8575 expander;
@@ -87,6 +107,7 @@ enum state {
 state currentState = waiting;
 char serialInput[MAX_LINE+1];
 double currentWeight;
+double lastWeight = 0;
 int percentWeight;
 int barHeight;
 char ledString[10];
@@ -105,7 +126,7 @@ void loop() {
 
   if(ledEnabled) {
     // Read the scale
-    currentWeight = scale.get_units(1);
+    currentWeight = scale.get_units(SAMPLES_PER_LOOP);
   
     // for some reason this started crashing the arduino... the thing might be broken tho
     if(currentWeight < 0) {
@@ -199,22 +220,33 @@ void loop() {
       break;
       
     case dispensing:
-      // Read the scale
+      
       if(!ledEnabled) {
-        currentWeight = scale.get_units(5);
+        // Read the scale
+        // If the weight LED is enabled, it will have already been read this loop.
+        currentWeight = scale.get_units(SAMPLES_PER_LOOP);
       }
+
+      // Skip this reading if it returned < 0
+      if(currentWeight < 0) {
+        break;
+      }
+
+      // Check that the current value does not deviate by a large amount
+      // which helps prevent noise from the scale.
+      if(abs(currentWeight - lastWeight) > NOISE_THRESHOLD) {
+        Serial.print("Measurement deviated by ");
+        Serial.print(currentWeight - lastWeight);
+        Serial.println(", skipping this reading");
+        lastWeight = currentWeight;
+        break;
+      }
+      lastWeight = currentWeight;
 
       percentWeight = (int)(currentWeight / targetWeight * 100);
       if(percentWeight < 0) { 
         percentWeight = 0;
       }
-
-      /*
-      if(ledEnabled) {
-        sprintf(ledString, "%2d%2d", pumpNumber, percentWeight);
-        s7sSendStringI2C(ledString);
-      }
-      */
 
       barHeight = (int)(currentWeight / targetWeight * 64);
       if(barHeight < 0) {
@@ -241,14 +273,16 @@ void loop() {
       display.print(oledPercentString);
       */
 
-      sprintf(oledWeightString, "%01d.%02dg     ", (int)(currentWeight), abs((int)(currentWeight*100)%100));
-      display.setCursor(0,52);
+      display.setTextSize(2);
+      sprintf(oledWeightString, "%01d.%01dg   ", (int)(currentWeight), abs((int)(currentWeight*10)%10));
+      // display.setCursor(0,52); // for size 1
+      display.setCursor(0,42); // for size 2
       display.print(oledWeightString);
 
       display.update();  
-
+      
       // If the scale registers greater than the target weight,
-      // stop the pump, and reset the state
+      // stop the pump, and reset the state.
       if(currentWeight >= targetWeight) {
         expander.digitalWrite(0, LOW);
         currentState = waiting;
@@ -261,6 +295,7 @@ void loop() {
         */
 
         display.setCursor(0,9);
+        display.setTextSize(1);
         display.print("Done!         ");
         display.update();
 
