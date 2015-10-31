@@ -308,25 +308,13 @@ void loop() {
       break;
   }
 
-  /*
-  expander.digitalWrite(0, HIGH);
-  expander.digitalWrite(1, LOW);
-  
-  Serial.println(scale.get_units(1), 2);
-  //Serial.print("\t| average:\t");
-  //Serial.println(scale.get_units(10), 1);
-  //Serial.print("\t| raw:\t");
-  //Serial.println(scale.read());
-
-  //scale.power_down();              // put the ADC in sleep mode
-  delay(100);
-  //scale.power_up();
-  //delay(100);
-  expander.digitalWrite(0, LOW);
-  expander.digitalWrite(1, HIGH);
-  delay(100);
-  */
 }
+
+
+
+
+
+
 
 
 int buttonStates[2] = {LOW, LOW};
