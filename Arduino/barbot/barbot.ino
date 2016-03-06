@@ -48,16 +48,14 @@ HX711 scale(SCALE_DATA, SCALE_CLK);
 PCF8575 expander;
 Piccolino_OLED_SRAM display;
 const byte expanderAddress = 0x20;
-const byte s7sAddress = 0x71;
+//const byte s7sAddress = 0x71;
 
-bool ledEnabled = false;
+//bool ledEnabled = false;
 
 void setup() {
   Serial.begin(BAUD);
   Serial.println("*-*-*-*-*-*-*-*-*-*-*-*-*");
-  Serial.println("*-*-*-*-*-*-*-*-*-*-*-*-*");
   Serial.println("BarBot");
-  Serial.println("*-*-*-*-*-*-*-*-*-*-*-*-*");
   Serial.println("*-*-*-*-*-*-*-*-*-*-*-*-*");
 
   //Serial.println("Setting up OLED display");
@@ -75,6 +73,7 @@ void setup() {
   pinMode(buttonPins[0], INPUT);
   pinMode(buttonPins[1], INPUT);
 
+  /*
   if(ledEnabled) {
     Serial.println("Setting up LED display");
     clearDisplayI2C();
@@ -84,6 +83,7 @@ void setup() {
     setDecimalsI2C(0b00000000);
     lcdBarBotAnimation();
   }
+  */
   
   expander.begin(expanderAddress);
   expander.pinMode(EXPPIN0, OUTPUT);
@@ -95,7 +95,6 @@ void setup() {
   
   scale.set_scale(SCALE_CALIBRATION);
 
-  Serial.println("Ready.");
   Serial.println("Enter serial command");
   Serial.println("Format: {pump number} {weight in milligrams} {name of liquor}");
   Serial.println("eg. 01 00084 3/4oz Bourbon");
@@ -138,6 +137,7 @@ int lastButton2 = LOW;
 
 void loop() {
 
+  /*
   if(ledEnabled) {
     // Read the scale
     currentWeight = scale.get_units(SAMPLES_PER_LOOP);
@@ -158,11 +158,12 @@ void loop() {
       }
     }
   }
+  */
   
   switch(currentState) {
     case waiting:
 
-      Serial.println("Waiting for serial data");
+      Serial.println("{\"mode\":\"ready\"}");
 
       while(!lineAvailable(MAX_LINE, serialInput)) {
         delay(10);
@@ -189,12 +190,14 @@ void loop() {
         Serial.println(serialInput);
         int command = parseSerialCommand((String)serialInput);
         if(command == 1) {
+          /*
           Serial.print("Pump: ");
           Serial.print(pumpNumber);
           Serial.print(" Weight: ");
           Serial.print(targetWeight);
           Serial.print(" Name: ");
           Serial.println(liquorName);
+          */
         
           currentState = tare;
         } else if(command == -1) {
@@ -226,20 +229,23 @@ void loop() {
 
         } else {
           Serial.println("Invalid serial command");
-          Serial.println("Format: {pump number} {weight in milliigrams} {name of liquor}");
-          Serial.println("eg. 01 00080 3/4oz Bourbon");
+          //Serial.println("Format: {pump number} {weight in milliigrams} {name of liquor}");
+          //Serial.println("eg. 01 00080 3/4oz Bourbon");
+          Serial.println("{\"mode\":\"error\"}");
           return;
         }
       }
       break;
       
     case tare:
+      /*
       if(ledEnabled) {
         setDecimalsI2C(0b00000000);
         s7sSendStringI2C("----");
       }
+      */
       
-      Serial.println("Tare");
+      Serial.println("{\"mode\":\"tare\"}");
 
       display.clear();
       display.setTextColor(WHITE);
@@ -254,10 +260,13 @@ void loop() {
       scale.set_scale(SCALE_CALIBRATION);
       scale.tare();
 
+      Serial.print("{\"mode\":\"starting\",\"pump\":");
+      Serial.print(pumpNumber);
+      Serial.print(",\"target_weight\":");
+      Serial.print(targetWeight, 3);
+      Serial.println("}");
+
       currentState = dispensing;
-      Serial.print("Dispensing now (");
-      Serial.print(String(targetWeight, 3));
-      Serial.println(")");
       
       // Turn on the pump
       expander.digitalWrite(pumpNumber-1, HIGH);
@@ -281,11 +290,11 @@ void loop() {
       
     case dispensing:
       
-      if(!ledEnabled) {
+      //if(!ledEnabled) {
         // Read the scale
         // If the weight LED is enabled, it will have already been read this loop.
         currentWeight = scale.get_units(SAMPLES_PER_LOOP);
-      }
+      //}
 
       // Skip this reading if it returned < 0
       if(currentWeight < 0) {
@@ -295,13 +304,21 @@ void loop() {
       // Check that the current value does not deviate by a large amount
       // which helps prevent noise from the scale.
       if(abs(currentWeight - lastWeight) > NOISE_THRESHOLD) {
-        Serial.print("Measurement deviated by ");
+        Serial.print("{\"mode\":\"skipped\",\"difference\":");
         Serial.print(currentWeight - lastWeight);
-        Serial.println(", skipping this reading");
+        Serial.println("}");
         lastWeight = currentWeight;
         break;
       }
       lastWeight = currentWeight;
+
+      Serial.print("{\"mode\":\"dispensing\",\"pump\":");
+      Serial.print(pumpNumber);
+      Serial.print(",\"target_weight\":");
+      Serial.print(targetWeight, 3);
+      Serial.print(",\"current_weight\":");
+      Serial.print(currentWeight, 3);
+      Serial.println("}");
 
       percentWeight = (int)(currentWeight / targetWeight * 100);
       if(percentWeight < 0) { 
@@ -354,8 +371,13 @@ void loop() {
         }
         */
 
-        Serial.print("Done! Weight increased by ");
-        Serial.println(currentWeight, 3);
+        Serial.print("{\"mode\":\"complete\",\"final_weight\":");
+        Serial.print(currentWeight, 3);
+        Serial.print(",\"target_weight\":");
+        Serial.print(targetWeight, 3);
+        Serial.print(",\"pump\":");
+        Serial.print(pumpNumber);
+        Serial.println("}");
 
         display.setCursor(0,9);
         display.setTextSize(1);
@@ -401,7 +423,7 @@ bool buttonPressed(int num) {
   }
 }
 
-
+/*
 // This custom function works somewhat like a serial.print.
 //  You can send it an array of chars (string) and it'll print
 //  the first 4 characters in the array.
@@ -447,6 +469,7 @@ void setDecimalsI2C(byte decimals)
   Wire.write(decimals);
   Wire.endTransmission();
 }
+*/
 
 boolean lineAvailable(int max_line, char *line)
 {
@@ -545,6 +568,7 @@ void defaultOLEDScreen()
   display.update();  
 }
 
+/*
 void lcdBarBotAnimation()
 {
   int delayTime = 150;
@@ -569,4 +593,5 @@ void lcdBarBotAnimation()
   s7sSendStringI2C("    ");
   delay(delayTime);
 }
+*/
 
