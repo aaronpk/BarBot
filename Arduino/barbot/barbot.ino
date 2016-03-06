@@ -19,19 +19,27 @@
 // Hardware debug buttons
 int buttonPins[2] = {14, 15};
 
-// this value is obtained by calibrating the scale with known weights
-#define SCALE_CALIBRATION -1916
-
 // How many samples of the scale to read per loop?
 // A larger number averages out errors better, but may cause 
 // overpours since we don't get a chance to stop the pump as often.
-#define SAMPLES_PER_LOOP 5
+#define SAMPLES_PER_LOOP 4
 
 // Between samples, if the weight difference is greater than this
 // value (in grams), the sample is tossed out. This smoothes out
 // jolts in the measurement such as when the glass is bumped, or
 // also if there is noise in the scale.
 #define NOISE_THRESHOLD 5
+
+/*
+ * Calibration:
+ * 
+ * Send a serial command of "calibrate"
+ * Place a known weight on the scale, and observe the reading.
+ * Divide the number shown by the known weight.
+ * Enter that number in the calibration parameter below
+ */
+// #define SCALE_CALIBRATION -1916
+#define SCALE_CALIBRATION -1220
 
 
 /////////////////////////////////////////////////////////////////
@@ -81,7 +89,11 @@ void setup() {
   expander.pinMode(EXPPIN0, OUTPUT);
   expander.pinMode(EXPPIN1, OUTPUT);
 
-  scale.set_scale(SCALE_CALIBRATION);                      
+  for(int i=0; i<16; i++) {
+    expander.digitalWrite(i, LOW);
+  }
+  
+  scale.set_scale(SCALE_CALIBRATION);
 
   Serial.println("Ready.");
   Serial.println("Enter serial command");
@@ -99,7 +111,9 @@ void setup() {
 enum state {
   waiting,
   tare,
-  dispensing
+  dispensing,
+  calibrate,
+  test
 };
 
 #define MAX_LINE 50
@@ -173,20 +187,49 @@ void loop() {
       // In debug mode, a button press will set currentState = tare
       if(currentState != tare) {
         Serial.println(serialInput);
-        if(!parseSerialCommand((String)serialInput)) {
+        int command = parseSerialCommand((String)serialInput);
+        if(command == 1) {
+          Serial.print("Pump: ");
+          Serial.print(pumpNumber);
+          Serial.print(" Weight: ");
+          Serial.print(targetWeight);
+          Serial.print(" Name: ");
+          Serial.println(liquorName);
+        
+          currentState = tare;
+        } else if(command == -1) {
+          // Calibrate
+          Serial.println("Beginning Calibration Mode");
+          
+          currentState = calibrate;
+          display.clear();
+          display.setTextColor(WHITE);
+          display.setTextSize(1);
+          display.setCursor(0,0);
+          display.print("Calibration Mode");
+          display.update();
+          scale.set_scale();
+          scale.tare();
+
+        } else if(command == -2) {
+          Serial.println("Beginning Test Mode");
+          
+          currentState = calibrate;
+          display.clear();
+          display.setTextColor(WHITE);
+          display.setTextSize(1);
+          display.setCursor(0,0);
+          display.print("Test Mode");
+          display.update();
+          scale.set_scale(SCALE_CALIBRATION);
+          scale.tare();
+
+        } else {
           Serial.println("Invalid serial command");
           Serial.println("Format: {pump number} {weight in milliigrams} {name of liquor}");
           Serial.println("eg. 01 00080 3/4oz Bourbon");
           return;
         }
-        Serial.print("Pump: ");
-        Serial.print(pumpNumber);
-        Serial.print(" Weight: ");
-        Serial.print(targetWeight);
-        Serial.print(" Name: ");
-        Serial.println(liquorName);
-      
-        currentState = tare;
       }
       break;
       
@@ -208,6 +251,7 @@ void loop() {
       display.print(ledString);
       display.update();
 
+      scale.set_scale(SCALE_CALIBRATION);
       scale.tare();
 
       currentState = dispensing;
@@ -217,6 +261,22 @@ void loop() {
       
       // Turn on the pump
       expander.digitalWrite(pumpNumber-1, HIGH);
+      break;
+
+    case test:
+    case calibrate:
+      currentWeight = scale.get_units(SAMPLES_PER_LOOP);
+      Serial.print("Current weight: ");
+      Serial.println(currentWeight);
+
+      display.setTextSize(2);
+      sprintf(oledWeightString, "%01d.%01dg   ", (int)(currentWeight), abs((int)(currentWeight*10)%10));
+      // display.setCursor(0,52); // for size 1
+      display.setCursor(0,42); // for size 2
+      display.print(oledWeightString);
+
+      display.update();  
+
       break;
       
     case dispensing:
@@ -284,7 +344,7 @@ void loop() {
       // If the scale registers greater than the target weight,
       // stop the pump, and reset the state.
       if(currentWeight >= targetWeight) {
-        expander.digitalWrite(0, LOW);
+        expander.digitalWrite(pumpNumber-1, LOW);
         currentState = waiting;
 
         /*
@@ -294,13 +354,14 @@ void loop() {
         }
         */
 
+        Serial.print("Done! Weight increased by ");
+        Serial.println(currentWeight, 3);
+
         display.setCursor(0,9);
         display.setTextSize(1);
         display.print("Done!         ");
         display.update();
 
-        Serial.print("Done! Weight increased by ");
-        Serial.println(currentWeight, 3);
       }
       break;
 
@@ -444,21 +505,29 @@ boolean readLine(int max_line, char *line)
   }
 }
 
-boolean parseSerialCommand(String inputString)
+int parseSerialCommand(String inputString)
 {
-  if(inputString.length() < 8) {
-    return false;
+  if(inputString.substring(0,9) == "calibrate") {
+    return -1;
   }
-  
+
+  if(inputString.substring(0,4) == "test") {
+    return -2;
+  }
+
+  if(inputString.length() < 8) {
+    return 0;
+  }
+
   pumpNumber = (int)inputString.substring(0,2).toInt();
   targetWeight = ((double)inputString.substring(3,8).toInt()) / 1000.0;
   liquorName = inputString.substring(9);
 
   if(pumpNumber == 0 || targetWeight == 0) {
-    return false;
+    return 0;
   }
 
-  return true;
+  return 1;
 }
 
 void defaultOLEDScreen()
