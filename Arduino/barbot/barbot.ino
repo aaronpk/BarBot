@@ -1,8 +1,8 @@
 #include <Wire.h>
 #include <SPI.h>
+#include <HX711.h>
 #include <Piccolino_RAM.h>
 #include <Piccolino_OLED_SRAM.h>
-#include <HX711.h>
 #include <PCF8575.h>
 
 // Which pins are the scale plugged in to
@@ -10,19 +10,28 @@
 #define SCALE_CLK 4
 
 // Pins 0 and 1 are SCL and SCA, you probably don't need to change
-#define EXPPIN0 0
-#define EXPPIN1 1
+// Piccolino
+// #define EXPPIN0 0
+// #define EXPPIN1 1
+// Uno
+//#define EXPPIN0 0
+//#define EXPPIN1 1
+
+int pumpPins[] = {
+  39, 37, 35, 33, 31, 29, 27, 25,
+  24, 26, 28, 30, 32, 34, 36, 38
+};
 
 // Serial communication rate
 #define BAUD 57600
 
 // Hardware debug buttons
-int buttonPins[2] = {14, 15};
+// int buttonPins[2] = {14, 15};
 
 // How many samples of the scale to read per loop?
 // A larger number averages out errors better, but may cause 
 // overpours since we don't get a chance to stop the pump as often.
-#define SAMPLES_PER_LOOP 4
+#define SAMPLES_PER_LOOP 2
 
 // Between samples, if the weight difference is greater than this
 // value (in grams), the sample is tossed out. This smoothes out
@@ -41,14 +50,15 @@ int buttonPins[2] = {14, 15};
 // #define SCALE_CALIBRATION -1916
 #define SCALE_CALIBRATION -1220
 
+#define DISPLAY_ENABLED false
 
 /////////////////////////////////////////////////////////////////
 
 HX711 scale(SCALE_DATA, SCALE_CLK);
-PCF8575 expander;
+// PCF8575 expander;
 Piccolino_OLED_SRAM display;
-const byte expanderAddress = 0x20;
-//const byte s7sAddress = 0x71;
+// const byte expanderAddress = 0x20;
+// const byte s7sAddress = 0x71;
 
 //bool ledEnabled = false;
 
@@ -58,20 +68,22 @@ void setup() {
   Serial.println("BarBot");
   Serial.println("*-*-*-*-*-*-*-*-*-*-*-*-*");
 
-  //Serial.println("Setting up OLED display");
-  display.begin();
-  display.clear();
+  if(DISPLAY_ENABLED) {
+    Serial.println("Setting up OLED display");
+    display.begin();
+    display.clear();
 
-  display.setCursor(12,10);
-  display.setTextColor(WHITE);
-  display.setTextSize(3);
-  display.print("BarBot");
-  display.update();
-
+    display.setCursor(12,10);
+    display.setTextColor(WHITE);
+    display.setTextSize(3);
+    display.print("BarBot");
+    display.update();
+  }
+  
   Wire.begin();
 
-  pinMode(buttonPins[0], INPUT);
-  pinMode(buttonPins[1], INPUT);
+  // pinMode(buttonPins[0], INPUT);
+  // pinMode(buttonPins[1], INPUT);
 
   /*
   if(ledEnabled) {
@@ -84,27 +96,36 @@ void setup() {
     lcdBarBotAnimation();
   }
   */
-  
-  expander.begin(expanderAddress);
-  expander.pinMode(EXPPIN0, OUTPUT);
-  expander.pinMode(EXPPIN1, OUTPUT);
 
+  Serial.println("Setting up pump pins");
+  // expander.begin(expanderAddress);
   for(int i=0; i<16; i++) {
-    expander.digitalWrite(i, LOW);
+    // expander.pinMode(i, OUTPUT);
+    pinMode(pumpPins[i], OUTPUT);
   }
-  
+
+  Serial.println("Setting all outputs to OFF");
+  for(int i=0; i<16; i++) {
+    // expander.digitalWrite(i, HIGH);
+    digitalWrite(pumpPins[i], HIGH);
+  }
+
+  Serial.println("Setting up scale");
   scale.set_scale(SCALE_CALIBRATION);
+  scale.tare();
 
   Serial.println("Enter serial command");
   Serial.println("Format: {pump number} {weight in milligrams} {name of liquor}");
   Serial.println("eg. 01 00084 3/4oz Bourbon");
   Serial.println("==========================");
 
-  display.setCursor(20,50);
-  display.setTextColor(WHITE);
-  display.setTextSize(1);
-  display.print("at your service");
-  display.update();  
+  if(DISPLAY_ENABLED) {
+    display.setCursor(20,50);
+    display.setTextColor(WHITE);
+    display.setTextSize(1);
+    display.print("at your service");
+    display.update();  
+  }
 }
 
 enum state {
@@ -168,6 +189,7 @@ void loop() {
       while(!lineAvailable(MAX_LINE, serialInput)) {
         delay(10);
 
+        /*
         if(buttonPressed(0)) {
           pumpNumber = 0;
           targetWeight = 5.0;
@@ -183,6 +205,7 @@ void loop() {
           currentState = tare;
           break;
         }
+        */
       }
 
       // In debug mode, a button press will set currentState = tare
@@ -205,12 +228,14 @@ void loop() {
           Serial.println("Beginning Calibration Mode");
           
           currentState = calibrate;
-          display.clear();
-          display.setTextColor(WHITE);
-          display.setTextSize(1);
-          display.setCursor(0,0);
-          display.print("Calibration Mode");
-          display.update();
+          if(DISPLAY_ENABLED) {
+            display.clear();
+            display.setTextColor(WHITE);
+            display.setTextSize(1);
+            display.setCursor(0,0);
+            display.print("Calibration Mode");
+            display.update();
+          }
           scale.set_scale();
           scale.tare();
 
@@ -218,14 +243,31 @@ void loop() {
           Serial.println("Beginning Test Mode");
           
           currentState = calibrate;
-          display.clear();
-          display.setTextColor(WHITE);
-          display.setTextSize(1);
-          display.setCursor(0,0);
-          display.print("Test Mode");
-          display.update();
+          if(DISPLAY_ENABLED) {
+            display.clear();
+            display.setTextColor(WHITE);
+            display.setTextSize(1);
+            display.setCursor(0,0);
+            display.print("Test Mode");
+            display.update();
+          }
           scale.set_scale(SCALE_CALIBRATION);
           scale.tare();
+
+        } else if(command == -3) {
+          Serial.println("Beginning Pump Cycle Test");
+
+          for(int i=0; i<16; i++) {
+            Serial.print("Pump ");
+            Serial.print(i+1);
+            Serial.println("");
+            delay(100);
+            // expander.digitalWrite(i, LOW);
+            digitalWrite(pumpPins[i], LOW);
+            delay(100);
+            // expander.digitalWrite(i, HIGH);
+            digitalWrite(pumpPins[i], HIGH);
+          }
 
         } else {
           Serial.println("Invalid serial command");
@@ -247,16 +289,18 @@ void loop() {
       
       Serial.println("{\"mode\":\"tare\"}");
 
-      display.clear();
-      display.setTextColor(WHITE);
-      display.setTextSize(1);
-      display.setCursor(0,0);
-      display.print(liquorName);
-      display.setCursor(0,9);
-      sprintf(ledString, "Pump %d", pumpNumber);
-      display.print(ledString);
-      display.update();
-
+      if(DISPLAY_ENABLED) {
+        display.clear();
+        display.setTextColor(WHITE);
+        display.setTextSize(1);
+        display.setCursor(0,0);
+        display.print(liquorName);
+        display.setCursor(0,9);
+        sprintf(ledString, "Pump %d", pumpNumber);
+        display.print(ledString);
+        display.update();
+      }
+ 
       scale.set_scale(SCALE_CALIBRATION);
       scale.tare();
 
@@ -269,7 +313,8 @@ void loop() {
       currentState = dispensing;
       
       // Turn on the pump
-      expander.digitalWrite(pumpNumber-1, HIGH);
+      // expander.digitalWrite(pumpNumber-1, LOW);
+      digitalWrite(pumpPins[pumpNumber-1], LOW);
       break;
 
     case test:
@@ -278,14 +323,16 @@ void loop() {
       Serial.print("Current weight: ");
       Serial.println(currentWeight);
 
-      display.setTextSize(2);
-      sprintf(oledWeightString, "%01d.%01dg   ", (int)(currentWeight), abs((int)(currentWeight*10)%10));
-      // display.setCursor(0,52); // for size 1
-      display.setCursor(0,42); // for size 2
-      display.print(oledWeightString);
-
-      display.update();  
-
+      if(DISPLAY_ENABLED) {
+        display.setTextSize(2);
+        sprintf(oledWeightString, "%01d.%01dg   ", (int)(currentWeight), abs((int)(currentWeight*10)%10));
+        // display.setCursor(0,52); // for size 1
+        display.setCursor(0,42); // for size 2
+        display.print(oledWeightString);
+  
+        display.update();  
+      }
+      
       break;
       
     case dispensing:
@@ -331,37 +378,42 @@ void loop() {
       } else if(barHeight > 64) {
         barHeight = 64;
       }
-      
-      display.fillRect(128-10, 0, 10, 64-barHeight, BLACK);
 
-      /*
-      display.setTextColor(WHITE);
-      display.setTextSize(1);
-      display.setCursor(0,0);
-      display.print(liquorName);
-      */
+      if(DISPLAY_ENABLED) {
+        display.fillRect(128-10, 0, 10, 64-barHeight, BLACK);
+  
+        /*
+        display.setTextColor(WHITE);
+        display.setTextSize(1);
+        display.setCursor(0,0);
+        display.print(liquorName);
+        */
+  
+        display.fillRect(128-10, 64-barHeight, 10, 64, WHITE);
+  
+        /*
+        sprintf(oledPercentString, "%2d%%", percentWeight);
+        display.setCursor(0,44);
+        display.setTextColor(WHITE);
+        display.print(oledPercentString);
+        */
+  
+        display.setTextSize(2);
+        sprintf(oledWeightString, "%01d.%01dg   ", (int)(currentWeight), abs((int)(currentWeight*10)%10));
+        // display.setCursor(0,52); // for size 1
+        display.setCursor(0,42); // for size 2
+        display.print(oledWeightString);
 
-      display.fillRect(128-10, 64-barHeight, 10, 64, WHITE);
-
-      /*
-      sprintf(oledPercentString, "%2d%%", percentWeight);
-      display.setCursor(0,44);
-      display.setTextColor(WHITE);
-      display.print(oledPercentString);
-      */
-
-      display.setTextSize(2);
-      sprintf(oledWeightString, "%01d.%01dg   ", (int)(currentWeight), abs((int)(currentWeight*10)%10));
-      // display.setCursor(0,52); // for size 1
-      display.setCursor(0,42); // for size 2
-      display.print(oledWeightString);
-
-      display.update();  
+        display.update();  
+      }
       
       // If the scale registers greater than the target weight,
       // stop the pump, and reset the state.
       if(currentWeight >= targetWeight) {
-        expander.digitalWrite(pumpNumber-1, LOW);
+        // Turn off the pump
+        digitalWrite(8, HIGH);
+        // expander.digitalWrite(pumpNumber-1, HIGH);
+        digitalWrite(pumpPins[pumpNumber-1], HIGH);
         currentState = waiting;
 
         /*
@@ -379,11 +431,13 @@ void loop() {
         Serial.print(pumpNumber);
         Serial.println("}");
 
-        display.setCursor(0,9);
-        display.setTextSize(1);
-        display.print("Done!         ");
-        display.update();
-
+        if(DISPLAY_ENABLED) {
+          display.setCursor(0,9);
+          display.setTextSize(1);
+          display.print("Done!         ");
+          display.update();
+        }
+        
       }
       break;
 
@@ -403,7 +457,7 @@ void loop() {
 int buttonStates[2] = {LOW, LOW};
 int lastButtonStates[2] = {LOW, LOW};
 
-
+/*
 bool buttonPressed(int num) {
   buttonStates[num] = digitalRead(buttonPins[num]);
   
@@ -422,6 +476,8 @@ bool buttonPressed(int num) {
     return false;
   }
 }
+*/
+
 
 /*
 // This custom function works somewhat like a serial.print.
@@ -538,6 +594,10 @@ int parseSerialCommand(String inputString)
     return -2;
   }
 
+  if(inputString.substring(0,5) == "cycle") {
+    return -3;
+  }
+
   if(inputString.length() < 8) {
     return 0;
   }
@@ -555,6 +615,10 @@ int parseSerialCommand(String inputString)
 
 void defaultOLEDScreen()
 {
+  if(!DISPLAY_ENABLED) {
+    return;
+  }
+    
   display.clear();
   display.setTextColor(WHITE);
 
