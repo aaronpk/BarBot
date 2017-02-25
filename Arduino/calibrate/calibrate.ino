@@ -11,7 +11,7 @@
 #define SCALE_CALIBRATION 0
 
 HX711 scale(SCALE_DATA, SCALE_CLK);
-PCF8575 expander;
+// PCF8575 expander;
 Piccolino_OLED_SRAM display;
 
 /*
@@ -35,13 +35,15 @@ void setup() {
 
   Serial.println("*-*-*-*-*-*-*-*-*-*-*-*-*");
   Serial.println("*-*-*-*-*-*-*-*-*-*-*-*-*");
-  Serial.println("BarBot");
+  Serial.println("BarBot Calibration");
   Serial.println("*-*-*-*-*-*-*-*-*-*-*-*-*");
   Serial.println("*-*-*-*-*-*-*-*-*-*-*-*-*");
 
-  expander.begin(expanderAddress);
-  expander.pinMode(0, OUTPUT);
-  expander.pinMode(1, OUTPUT);
+  Wire.begin();
+
+  // expander.begin(expanderAddress);
+  // expander.pinMode(0, OUTPUT);
+  // expander.pinMode(1, OUTPUT);
 
   display.begin();
   display.clear();
@@ -103,7 +105,7 @@ int lastButton1 = LOW;
 int lastButton2 = LOW;
 
 void loop() {
-  
+  /*
   int button1 = digitalRead(button1pin);
   int button2 = digitalRead(button2pin);
 
@@ -120,12 +122,12 @@ void loop() {
   }
 
   expander.digitalWrite(0, button1);
+  */
   
   currentWeight = scale.get_units(2);
+  Serial.println(currentWeight);
 
   sprintf(oledWeightString, "%01d.%03dg     ", (int)(currentWeight), abs((int)(currentWeight*1000)%1000));
-
-  Serial.println(currentWeight);
 
   display.setCursor(0, 0);
   display.print(oledWeightString);
