@@ -39,6 +39,8 @@ while(true) {
     usleep(50000);
   }
   
+  redis()->set('barbot-active', 1);
+
   $job = json_decode($data);
   print_r($job);
   echo "\n";
@@ -62,6 +64,8 @@ while(true) {
     }
   }
   
+  redis()->set('barbot-active', 0);
+
   echo "Completed drink\n";
   redis()->del('barbot-queue');
   sleep(1);
