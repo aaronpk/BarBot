@@ -18,6 +18,8 @@ h2 {
 }
 
 
+
+
 body.barbot {
   display: flex;
   flex-direction: row;
@@ -145,4 +147,6 @@ body.barbot .queue {
   font-style: italic;
   font-family: serif;
 }
-
+.not-in-cabinet {
+  color: #a1311d;
+}

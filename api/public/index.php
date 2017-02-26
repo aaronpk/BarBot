@@ -29,6 +29,9 @@ require_once('vendor/autoload.php');
     padding-top: 6px;
     font-size: 12px;
   }
+  .username a {
+    color: #222;
+  }
 </style>
 </head>
 <body>
@@ -38,10 +41,13 @@ require_once('vendor/autoload.php');
   <h1>Cocktails</h1>
 
   <?php
-  $recipes = ORM::for_table('recipes')->find_many();
+  $recipes = ORM::for_table('recipes')
+    ->order_by_asc('name')
+    ->find_many();
   foreach($recipes as $recipe):
     $ingredients = ORM::for_table('recipe_ingredients')
-      ->join('ingredients', ['ingredients.id', '=', 'recipe_ingredients.ingredient_id'])
+      ->left_outer_join('ingredients', ['ingredients.id', '=', 'recipe_ingredients.ingredient_id'])
+      ->left_outer_join('pumps', ['ingredients.id', '=', 'pumps.ingredient_id'])
       ->where('recipe_id', $recipe->id)
       ->order_by_asc('order')
       ->find_many();
@@ -53,12 +59,21 @@ require_once('vendor/autoload.php');
           <span class="name"><?= $recipe->name ?></span>
           <span class="cost">
             <?= sprintf("$%.02f", array_sum(array_map(function($g) { 
+              if(!$g->ml) return 0;
               return oz_to_ml($g->fluid_oz) * ($g->cost / $g->ml);
             }, $ingredients))) ?>
           </span>
         </span>
         <span class="ingredients">
-          <?= implode(', ', array_map(function($g){ return $g->name; }, $ingredients)) ?>
+          <?= implode(', ', array_map(function($g){
+            $str = '';
+            if(!$g->number)
+              $str .= '<span class="not-in-cabinet">';
+            $str .= $g->name ?: $g->ingredient_name;
+            if(!$g->number)
+              $str .= '</span>';
+            return $str;
+          }, $ingredients)) ?>
         </span>
       </span>
     </div>
