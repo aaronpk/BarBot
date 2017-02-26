@@ -1,7 +1,7 @@
 <?php
 require_once(dirname(__FILE__).'/config.php');
 
-ORM::configure('mysql:host=' . Config::$dbHost . ';dbname=' . Config::$dbName);
+ORM::configure('mysql:host=' . Config::$dbHost . ';dbname=' . Config::$dbName . ';charset=utf8');
 ORM::configure('username', Config::$dbUsername);
 ORM::configure('password', Config::$dbPassword);  
 
