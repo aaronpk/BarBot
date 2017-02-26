@@ -19,3 +19,13 @@ function oz_to_ml($oz) {
 function ml_to_oz($ml) {
   return $ml / 29.5735;
 }
+
+function calculate_drink_cost($id) {
+  $ingredients = ORM::for_table('recipe_ingredients')
+    ->join('ingredients', ['ingredients.id', '=', 'recipe_ingredients.ingredient_id'])
+    ->where('recipe_id', $id)
+    ->find_many();
+  return array_sum(array_map(function($g) { 
+      return oz_to_ml($g->fluid_oz) * ($g->cost / $g->ml);
+    }, $ingredients));
+}

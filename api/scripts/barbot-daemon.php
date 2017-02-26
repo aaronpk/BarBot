@@ -45,6 +45,12 @@ while(true) {
   print_r($job);
   echo "\n";
   
+  $queue = ORM::for_table('log')->find_one($job->queue_id);
+  $queue->date_started = date('Y-m-d H:i:s');
+  $queue->save();
+
+  $final_weights = [];
+
   foreach($job->pumps as $pump) {
     echo "Pump $pump->number Weight $pump->weight\n";
     fwrite($ser, sprintf("%02d %05d go", $pump->number, $pump->weight)."\r");
@@ -53,11 +59,15 @@ while(true) {
       $data = @json_decode($line);
       if(trim($line)) {
         redis()->publish('barbot-output', $line);
-        redis()->set('barbot-status', $line);
+        if($data) {
+          redis()->set('barbot-status', $line);
+        }
       }
       if($data && property_exists($data, 'mode') && $data->mode == 'complete') {
         #print_r($data);
         $complete = true;
+        $final_weights[] = $data;
+
         echo "Finished!\n";
         sleep(1);
       }
@@ -65,6 +75,10 @@ while(true) {
   }
   
   redis()->set('barbot-active', 0);
+
+  $queue->date_finished = date('Y-m-d H:i:s');
+  $queue->final_weights = json_encode($final_weights);
+  $queue->save();
 
   echo "Completed drink\n";
   redis()->del('barbot-queue');

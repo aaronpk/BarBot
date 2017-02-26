@@ -1,0 +1,148 @@
+h1 {
+  font-family: "AmericanTypewriter", "Baskerville", "Roboto";
+  font-weight: bold;
+  font-size: 42px;
+  text-transform: uppercase;
+  text-align: center;
+  padding: 0;
+  border-bottom: 1px dotted #222;
+  margin: 0;
+  margin-bottom: 20px;
+}
+h2 {
+  text-align: center;
+}
+
+.hidden {
+  display: none;
+}
+
+
+body.barbot {
+  display: flex;
+  flex-direction: row;
+  height: 100vh;
+  padding: 0;
+  margin: 0;
+}
+
+body.barbot .current {
+  flex: 0.8 0;
+  background: #000;
+  height: 100vh;
+}
+
+body.barbot .queue {
+  flex: 1.2 0;
+  background: #fdf5e8;
+  height: 100vh;
+}
+
+.queue h1, .current h1 {
+  margin-bottom: 0;
+  margin-top: 20px;
+}
+.current h1 {
+  border-color: #888;
+}
+.current h2 {
+  font-family: "AmericanTypewriter", "Baskerville", "Roboto";
+  font-weight: bold;
+  font-size: 28px;
+  text-transform: uppercase;
+}
+
+.queue-list .menu-item {
+  margin: 0 auto;
+  padding: 10px;
+  border-bottom: 1px dotted #222;
+  font-size: 22px;
+}
+
+.queue-list .details {
+  position: relative;
+}
+.queue-list .details .delete {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+}
+.queue-list .details .delete a {
+  text-decoration: none;
+  color: #aaa;
+}
+
+.current .name {
+  font-family: "AmericanTypewriter", "Baskerville", "Roboto";
+  font-weight: normal;
+  text-align: center;
+  margin-top: 12px;
+  font-size: 22px;
+}
+.current .cost {
+  color: #E97E6B;
+}
+.current .cost:before {
+  content: " — ";
+}
+.current .for-user {
+  text-align: center;
+  margin: 8px 0;
+  font-size: 22px;
+}
+.current .photo {
+  width: 100%;
+}
+.current .ingredients {
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.current {
+  position: relative;
+}
+.current .dispensing {
+}
+.current .last-made {
+  position: absolute;
+  width: 100%;
+  bottom: 0;
+  padding-bottom: 20px;
+}
+
+
+
+.menu-item {
+  display: flex;
+  flex-direction: row;
+}
+.menu-item .photo {
+  width: 120px;
+  display: block;
+  margin-right: 10px;
+}
+.menu-item .photo img {
+  width: 100%;
+  border-radius: 4px;
+}
+.menu-item .details {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+.menu-item .name {
+  font-family: "AmericanTypewriter", "Baskerville", "Roboto";
+}
+.menu-item .cost {
+  color: #A1311D;
+  font-family: "AmericanTypewriter", "Baskerville", "Roboto";
+  font-size: 0.8em;
+}
+.menu-item .cost:before {
+  content: " — ";
+}
+.ingredients, .for-user {
+  font-style: italic;
+  font-family: serif;
+}
+

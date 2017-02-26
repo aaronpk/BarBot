@@ -1,8 +1,10 @@
 <?php
-chdir('..');
+chdir('../..');
 require_once('vendor/autoload.php');
 
-/*
+header('Content-type: application/json');
+
+
 // Check if a job is currently running
 
 $active = redis()->get('barbot-active');
@@ -13,10 +15,21 @@ if($active) {
   die();
 }
 
-$pumps = [];
+
+$queue = ORM::for_table('log')
+  ->where('id', $_POST['queue_id'])
+  ->where_null('date_started')
+  ->find_one();
+
+if(!$queue) {
+  echo json_encode([
+    'error' => 'Could not find item'
+  ]);
+  die();
+}
 
 $recipe = ORM::for_table('recipes')
-  ->where('name', $_POST['recipe'])
+  ->where('id', $queue->recipe_id)
   ->find_one();
 
 $ingredients = ORM::for_table('recipe_ingredients')
@@ -25,6 +38,8 @@ $ingredients = ORM::for_table('recipe_ingredients')
   ->where('recipe_id', $recipe->id)
   ->order_by_asc('order')
   ->find_many();
+
+$pumps = [];
 
 foreach($ingredients as $g) {
   $oz = (double)$g->fluid_oz;
@@ -44,47 +59,10 @@ foreach($ingredients as $g) {
 }
 
 redis()->set('barbot-queue', json_encode([
-  'pumps' => $pumps
+  'pumps' => $pumps,
+  'queue_id' => $queue->id
 ]));
 
 
 echo json_encode($pumps, JSON_PRETTY_PRINT);
-die();
-*/
-
-
-/*
-$recipes = [
-  'boulevardier' => [
-    [
-      'number' => 8,
-      'weight' => 21310
-    ],
-    [
-      'number' => 13,
-      'weight' => 42620,
-    ],
-    [
-      'number' => 15,
-      'weight' => 21310
-    ],
-    [
-      'number' => 7,
-      'weight' => 500
-    ]
-  ]
-];
-
-if(array_key_exists($_POST['recipe'], $recipes)) {
-  $recipe = $recipes[$_POST['recipe']];
-  
-  redis()->set('barbot-queue', json_encode([
-    'pumps' => $recipe
-  ]));
-  
-  echo "Making a ".$_POST['recipe']."\n";
-} else {
-  echo "Recipe Not Found\n";
-}
-*/
 
