@@ -5,7 +5,7 @@ require_once('vendor/autoload.php');
 <!doctype html>
 <html>
 <head>
-  <meta charset="UTF-8">
+  <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>BarBot</title>
   <script src="/assets/jscookie.js"></script>
@@ -42,6 +42,7 @@ require_once('vendor/autoload.php');
 
   <?php
   $recipes = ORM::for_table('recipes')
+    ->where('available', 1)
     ->order_by_asc('name')
     ->find_many();
   foreach($recipes as $recipe):
@@ -67,8 +68,10 @@ require_once('vendor/autoload.php');
         <span class="ingredients">
           <?= implode(', ', array_map(function($g){
             $str = '';
-            if(!$g->number)
+            if(!$g->number) {
               $str .= '<span class="not-in-cabinet">';
+              $str .= $g->measurement . ' ';
+            }
             $str .= $g->name ?: $g->ingredient_name;
             if(!$g->number)
               $str .= '</span>';
