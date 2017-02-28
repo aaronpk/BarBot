@@ -117,6 +117,7 @@ body.barbot .queue {
 .menu-item {
   display: flex;
   flex-direction: row;
+  margin-bottom: 10px;
 }
 .menu-item .photo {
   width: 120px;

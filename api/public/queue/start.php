@@ -47,6 +47,9 @@ foreach($ingredients as $g) {
 
   $ml = oz_to_ml($oz);
   $grams = round($ml * 1000 / $gravity);
+  
+  // temporary fix since it seems to be overpouring
+  $grams = $grams * 0.85;
 
   $pumps[] = [
     'number' => (int)$g->number,
