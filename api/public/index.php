@@ -42,7 +42,7 @@ require_once('vendor/autoload.php');
 
   <?php
   $recipes = ORM::for_table('recipes')
-    ->where('available', 1)
+    ->where('enabled', 1)
     ->order_by_asc('name')
     ->find_many();
   foreach($recipes as $recipe):
@@ -52,8 +52,11 @@ require_once('vendor/autoload.php');
       ->where('recipe_id', $recipe->id)
       ->order_by_asc('order')
       ->find_many();
+    $all_ingredients_present = array_reduce($ingredients, function($carry, $g){
+      return $carry && $g->available;
+    }, true);
     ?>
-    <div class="menu-item" data-id="<?= $recipe->id ?>" data-name="<?= $recipe->name ?>">
+    <div class="menu-item<?= $all_ingredients_present ? '' : ' missing' ?>" data-id="<?= $recipe->id ?>" data-name="<?= $recipe->name ?>">
       <span class="photo"><img src="/images/<?= $recipe->photo ?>"></span>
       <span class="details">
         <span>
@@ -97,38 +100,40 @@ showLoggedInUser();
 
 var elements = document.querySelectorAll(".menu-item");
 Array.prototype.forEach.call(elements, function(el, i){
-  el.addEventListener("click", function(el){
-    var drink_id = el.target.closest(".menu-item").dataset.id;
-    var drink_name = el.target.closest(".menu-item").dataset.name;
-
-    if(username == null) {
-      while(username == null) {
-        username = prompt("What is your name?");
-        if(username == null) {
-          break;
-        } else {
-          if(username.match(/^[A-Za-z0-9_\-\.]+$/) !== null) {
-            Cookies.set("username", username, { expires: 30 });
-            showLoggedInUser();
+  if(!el.classList.contains("missing")) {
+    el.addEventListener("click", function(el){
+      var drink_id = el.target.closest(".menu-item").dataset.id;
+      var drink_name = el.target.closest(".menu-item").dataset.name;
+  
+      if(username == null) {
+        while(username == null) {
+          username = prompt("What is your name?");
+          if(username == null) {
+            break;
           } else {
-            alert("Only letters, numbers and _-. are allowed. Try again.");
-            username = null;
+            if(username.match(/^[A-Za-z0-9_\-\.]+$/) !== null) {
+              Cookies.set("username", username, { expires: 30 });
+              showLoggedInUser();
+            } else {
+              alert("Only letters, numbers and _-. are allowed. Try again.");
+              username = null;
+            }
           }
         }
       }
-    }
-
-    if(username && confirm("Add a \""+drink_name+"\" to the queue?")) {
-
-      var request = new XMLHttpRequest();
-      request.open('POST', '/enqueue.php', true);
-      request.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
-      request.send("recipe_id="+drink_id+"&username="+username);
-
-      alert("Got it! Visit BarBot to start your drink!");
-    }
-
-  });
+  
+      if(username && confirm("Add a \""+drink_name+"\" to the queue?")) {
+  
+        var request = new XMLHttpRequest();
+        request.open('POST', '/enqueue.php', true);
+        request.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
+        request.send("recipe_id="+drink_id+"&username="+username);
+  
+        alert("Got it! Visit BarBot to start your drink!");
+      }
+  
+    });
+  }
 });
 
 function logout() {

@@ -1,6 +1,7 @@
 CREATE TABLE `ingredients` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(255) DEFAULT NULL,
+  `available` tinyint(4) NOT NULL DEFAULT '1',
   `details` varchar(255) DEFAULT NULL,
   `gravity` double DEFAULT NULL,
   `cost` double DEFAULT NULL,
@@ -12,6 +13,7 @@ CREATE TABLE `recipes` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(255) DEFAULT NULL,
   `photo` varchar(255) DEFAULT NULL,
+  `enabled` tinyint(4) NOT NULL DEFAULT '1',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4;
 

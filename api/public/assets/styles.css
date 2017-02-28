@@ -119,6 +119,9 @@ body.barbot .queue {
   flex-direction: row;
   margin-bottom: 10px;
 }
+.menu-item.missing {
+  opacity: 0.3;
+}
 .menu-item .photo {
   width: 120px;
   display: block;
