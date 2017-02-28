@@ -34,6 +34,8 @@ while(($line = fgets($ser)) !== false && !$ready) {
 echo "BarBot Initialized\n";
 
 while(true) {
+  
+  ORM::set_db(new_db());
 
   while(!($data=redis()->get('barbot-queue'))) {
     usleep(50000);
@@ -82,5 +84,9 @@ while(true) {
 
   echo "Completed drink\n";
   redis()->del('barbot-queue');
+  
+  // Disconnect from the DB
+  ORM::set_db(null);
+  
   sleep(1);
 }

@@ -3,7 +3,11 @@ require_once(dirname(__FILE__).'/config.php');
 
 ORM::configure('mysql:host=' . Config::$dbHost . ';dbname=' . Config::$dbName . ';charset=utf8');
 ORM::configure('username', Config::$dbUsername);
-ORM::configure('password', Config::$dbPassword);  
+ORM::configure('password', Config::$dbPassword);
+
+function new_db() {
+  return new PDO('mysql:host=' . Config::$dbHost . ';dbname=' . Config::$dbName . ';charset=utf8', Config::$dbUsername, Config::$dbPassword);
+}
 
 function redis() {
   static $client = false;
