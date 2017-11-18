@@ -39,6 +39,26 @@ function calculate_ingredient_cost($id, $fluid_oz) {
   return oz_to_ml($fluid_oz) * ($ingredient->cost / $ingredient->ml);
 }
 
+function build_redis_queue_item($ingredient, $fluid_oz) {
+  $oz = (double)$fluid_oz;
+  $gravity = (double)$ingredient->gravity;
+
+  $ml = oz_to_ml($oz);
+  $grams = round($ml * 1000 / $gravity);
+  
+  // temporary fix since it seems to be overpouring
+  $grams = $grams * 0.85;
+
+  return [
+    'number' => (int)$ingredient->number,
+    'name' => $ingredient->name,
+    'gravity' => (double)$ingredient->gravity,
+    'oz' => (double)$fluid_oz,
+    'ml' => $ml,
+    'weight' => $grams
+  ];
+}
+
 function tz() {
   static $tz;
   if(!isset($tz))

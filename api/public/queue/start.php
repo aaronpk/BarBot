@@ -42,23 +42,7 @@ $ingredients = ORM::for_table('recipe_ingredients')
 $pumps = [];
 
 foreach($ingredients as $g) {
-  $oz = (double)$g->fluid_oz;
-  $gravity = (double)$g->gravity;
-
-  $ml = oz_to_ml($oz);
-  $grams = round($ml * 1000 / $gravity);
-  
-  // temporary fix since it seems to be overpouring
-  $grams = $grams * 0.85;
-
-  $pumps[] = [
-    'number' => (int)$g->number,
-    'name' => $g->name,
-    'gravity' => (double)$g->gravity,
-    'oz' => (double)$g->fluid_oz,
-    'ml' => $ml,
-    'weight' => $grams
-  ];
+  $pumps[] = build_redis_queue_item($g, $g->fluid_oz);
 }
 
 redis()->set('barbot-queue', json_encode([

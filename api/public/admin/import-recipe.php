@@ -15,6 +15,8 @@ require_once('vendor/autoload.php');
     margin: 0 auto;
     padding-top: 20px;
     font-family: sans-serif;
+    background: #fdf5e8;
+    color: #111;
   }
   .edit-recipe input {
     width: 100%;
@@ -27,6 +29,9 @@ require_once('vendor/autoload.php');
   }
   .edit-recipe input.amount {
     width: auto;
+  }
+  .links li {
+    padding: 6px;
   }
   </style>
 </head>
@@ -99,7 +104,7 @@ if(isset($_GET['add'])):
   <?php
 else:
   ?>
-  <form action="/edit/" method="get">
+  <form action="/edit/import-recipe.php" method="get">
     <div><input type="url" name="add" placeholder="http://example.com/recipe" size="40"></div>
     <button>Parse Recipe</button>
   </form>
