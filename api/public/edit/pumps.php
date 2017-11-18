@@ -7,7 +7,7 @@ require_once('vendor/autoload.php');
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Recipes</title>
+  <title>Configure Pumps</title>
   <link rel="stylesheet" href="/assets/styles.css">
   <style type="text/css">
   body {
@@ -39,7 +39,7 @@ require_once('vendor/autoload.php');
 
 <h2>Configure Pumps</h2>
 
-<table>
+<table class="pumps">
 <?php
 
 $ingredients = ORM::for_table('ingredients')->order_by_asc('name')->find_many();
@@ -49,14 +49,16 @@ function show_pump($pump) {
 ?>
   <td>
     <span class="pump-number"><span><?= $pump->number ?></span></span>
-    <select name="pump-[<?= $pump->number ?>]">
-      <? $found = false ?>
-      <? foreach($ingredients as $ing): ?>
-        <? $selected = (strtolower($pump->name) == strtolower($ing['name'])); ?>
-        <? $found = $found || $selected; ?>
-        <option value="<?= $ing['id'] ?>" <?= $selected ? ' selected="selected"' : '' ?>"><?= $ing['name'] ?></option>
-      <? endforeach; ?>
-      <option value="0" <?= !$found ? ' selected="selected"' : '' ?>>-- None --</option>
+    <select data-pump="<?= $pump->number ?>">
+      <?
+      $found = false;
+      foreach($ingredients as $ing):
+        $selected = (strtolower($pump->name) == strtolower($ing['name']));
+        $found = $found || $selected;
+        echo '<option value="' . $ing['id'] . '" ' . ($selected ? ' selected="selected"' : '' ) . '">' . $ing['name'] . '</option>';
+      endforeach;
+      echo '<option value="0" ' . (!$found ? ' selected="selected"' : '' ) . '>-- None --</option>';
+      ?>
     </select>
   </td>
 <?php
@@ -76,7 +78,13 @@ endforeach;
 <script>
 $(function(){
   
-  
+  $(".pumps select").change(function(){
+    console.log($(this).data("pump")+" = "+$(this).val());
+    $.post("/edit/save-pump.php", {
+      pump: $(this).data("pump"),
+      ingredient: $(this).val()
+    });
+  });
   
   
 });
