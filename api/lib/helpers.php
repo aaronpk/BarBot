@@ -33,3 +33,15 @@ function calculate_drink_cost($id) {
       return oz_to_ml($g->fluid_oz) * ($g->cost / $g->ml);
     }, $ingredients));
 }
+
+function calculate_ingredient_cost($id, $fluid_oz) {
+  $ingredient = ORM::for_table('ingredients')->find_one($id);
+  return oz_to_ml($fluid_oz) * ($ingredient->cost / $ingredient->ml);
+}
+
+function tz() {
+  static $tz;
+  if(!isset($tz))
+    $tz = new DateTimeZone('America/Los_Angeles');
+  return $tz;
+}

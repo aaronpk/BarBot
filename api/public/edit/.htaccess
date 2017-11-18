@@ -1,0 +1,4 @@
+AuthType Basic
+AuthName "Admins Only"
+AuthUserFile /web/barbot/api/.htpasswd
+Require valid-user

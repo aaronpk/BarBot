@@ -37,7 +37,8 @@ if(isset($_GET['add'])):
 
   $ingredients = ORM::for_table('ingredients')->order_by_asc('name')->find_many();
 
-  $data = Mf2\fetch($_GET['add']);
+  $html = file_get_contents($_GET['add']);
+  $data = Mf2\parse($html);
   if($data && isset($data['items']) && count($data['items'])):
     $recipe = $data['items'][0]['properties'];
   ?>
@@ -95,6 +96,13 @@ if(isset($_GET['add'])):
     <p>Could not find an h-recipe on the page</p>
   <?php endif; ?>
 
+  <?php
+else:
+  ?>
+  <form action="/edit/" method="get">
+    <div><input type="url" name="add" placeholder="http://example.com/recipe" size="40"></div>
+    <button>Parse Recipe</button>
+  </form>
   <?php
 endif;
 ?>

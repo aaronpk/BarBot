@@ -1,12 +1,13 @@
+#!/usr/bin/php
 <?php
-chdir('..');
+chdir(dirname(__FILE__).'/..');
 require_once('vendor/autoload.php');
 
 ini_set("auto_detect_line_endings", true);
 
 $port = '/dev/ttyACM0';
 
-#shell_exec('stty -F '.$port.' cs8 57600 ignbrk -brkint -imaxbel -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke noflsh -ixon -crtscts');
+shell_exec('stty -F '.$port.' cs8 57600 ignbrk -brkint -imaxbel -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke noflsh -ixon -crtscts');
 
 $ser = fopen($port, "w+");
 
@@ -35,12 +36,12 @@ echo "BarBot Initialized\n";
 
 while(true) {
   
-  ORM::set_db(new_db());
-
   while(!($data=redis()->get('barbot-queue'))) {
-    usleep(50000);
+    usleep(500000);
   }
   
+  ORM::set_db(new_db());
+
   redis()->set('barbot-active', 1);
 
   $job = json_decode($data);
@@ -48,8 +49,10 @@ while(true) {
   echo "\n";
   
   $queue = ORM::for_table('log')->find_one($job->queue_id);
-  $queue->date_started = date('Y-m-d H:i:s');
-  $queue->save();
+  if($queue) {
+    $queue->date_started = date('Y-m-d H:i:s');
+    $queue->save();
+  }
 
   $final_weights = [];
 
@@ -78,9 +81,11 @@ while(true) {
   
   redis()->set('barbot-active', 0);
 
-  $queue->date_finished = date('Y-m-d H:i:s');
-  $queue->final_weights = json_encode($final_weights);
-  $queue->save();
+  if($queue) {
+    $queue->date_finished = date('Y-m-d H:i:s');
+    $queue->final_weights = json_encode($final_weights);
+    $queue->save();
+  }
 
   echo "Completed drink\n";
   redis()->del('barbot-queue');
