@@ -33,7 +33,7 @@ require_once('vendor/autoload.php');
       color: #111;
     }
   </style>
-  <script src="/assets/jquery-3.2.1.min.js"></script>
+  <script src="/assets/jquery-3.3.1.min.js"></script>
 </head>
 <body>
 

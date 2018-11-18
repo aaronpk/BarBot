@@ -27,7 +27,6 @@ require_once('vendor/autoload.php');
 
   <ul class="links">
     <li><a href="pumps.php">Configure Pumps</a></li>
-    <li><a href="import-recipe.php">Import Recipe</a></li>
     <li><a href="recipes.php">Edit Recipes</a></li>
     <li><a href="/manual/">Manual Pour</a></li>
     <li><a href="/log/">Log</a></li>

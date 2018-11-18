@@ -80,7 +80,7 @@ $(function(){
   
   $(".pumps select").change(function(){
     console.log($(this).data("pump")+" = "+$(this).val());
-    $.post("/edit/save-pump.php", {
+    $.post("/admin/save-pump.php", {
       pump: $(this).data("pump"),
       ingredient: $(this).val()
     });

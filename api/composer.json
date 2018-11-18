@@ -2,7 +2,8 @@
   "require": {
     "predis/predis": "^1.1",
     "j4mie/idiorm": "^1.5",
-    "mf2/mf2": "^0.3.0"
+    "mf2/mf2": "^0.3.0",
+    "p3k/http": "^0.1.7"
   },
   "autoload": {
     "files": [

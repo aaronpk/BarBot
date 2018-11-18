@@ -26,4 +26,4 @@ foreach($_POST['ingredient'] as $id=>$data) {
   }
 }
 
-header('Location: /edit/recipe.php?id='.$_POST['recipe_id']);
+header('Location: /admin/recipe.php?id='.$_POST['recipe_id']);

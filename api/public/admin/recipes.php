@@ -48,6 +48,7 @@ require_once('vendor/autoload.php');
       <span class="photo"><img src="/images/<?= $recipe->photo ?>"></span>
       <span class="details">
         <span>
+          <input type="checkbox" class="enabled" value="1" data-recipe-id="<?= $recipe->id ?>" <?= $recipe->enabled ? 'checked="checked"' : '' ?>>
           <span class="name"><a href="recipe.php?id=<?= $recipe->id ?>"><?= $recipe->name ?></a></span>
           <span class="cost">
             <?= sprintf("$%.02f", array_sum(array_map(function($g) { 
@@ -78,7 +79,7 @@ require_once('vendor/autoload.php');
   <br><br>
   
   <h3>New Recipe</h3>
-  <form action="create-recipe.php" method="post">
+  <form action="create-recipe.php" method="post" enctype="multipart/form-data">
     <input type="text" name="name">
     <input type="file" name="photo">
     <input type="submit" value="Create">
@@ -87,7 +88,7 @@ require_once('vendor/autoload.php');
   <br><br>
 
   <h3>Import from h-recipe</h3>
-  <form action="/edit/import-recipe.php" method="get">
+  <form action="import-recipe.php" method="get">
     <div><input type="url" name="add" placeholder="http://example.com/recipe" size="40"></div>
     <button>Parse Recipe</button>
   </form>
@@ -95,5 +96,15 @@ require_once('vendor/autoload.php');
   <br><br>
   <br><br>
 
+<script>
+$(function(){
+  $(".enabled").change(function(){
+    $.post("enable-recipe.php", {
+      recipe_id: $(this).data("recipe-id"),
+      enabled: this.checked ? 1 : 0
+    });
+  });
+});
+</script>
 </body>
 </html>

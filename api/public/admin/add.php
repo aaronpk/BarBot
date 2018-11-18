@@ -25,5 +25,4 @@ foreach($_POST['ingredient'] as $i=>$ingredient_id) {
   }
 }
 
-echo '<pre>';
-print_r($_POST);
+header('Location: /admin/recipe.php?id='.$recipe->id);
